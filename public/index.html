@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EarnJoy MVP</title>
+<style>
+body{font-family:system-ui,"Noto Sans Thai",sans-serif;margin:0;background:#f4f8fc;color:#122a44}.wrap{max-width:900px;margin:auto;padding:24px}.card{background:#fff;border:1px solid #e1eaf2;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 8px 25px #1b557012}button,input,select{font:inherit;padding:11px;border-radius:10px}button{border:0;background:#0b82d8;color:#fff;font-weight:700;cursor:pointer}input,select{border:1px solid #ccdbe7;width:100%;box-sizing:border-box;margin:5px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.muted{color:#687b8e}.mission{display:flex;justify-content:space-between;gap:15px;align-items:center}@media(max-width:650px){.grid{grid-template-columns:1fr}.mission{align-items:flex-start;flex-direction:column}}
+</style></head><body><div class="wrap">
+<h1>🟦 EarnJoy</h1><p class="muted">MVP Backend + API สำหรับทดสอบระบบภารกิจและรางวัล</p>
+<div id="auth" class="card"><h2>เข้าสู่ระบบ</h2><input id="email" placeholder="อีเมล"><input id="password" type="password" placeholder="รหัสผ่าน"><input id="name" placeholder="ชื่อ (ใช้ตอนสมัคร)"><button onclick="register()">สมัคร</button> <button onclick="login()">เข้าสู่ระบบ</button><p id="msg"></p></div>
+<div id="dash" style="display:none"><div class="grid"><div class="card"><small>พร้อมรับ</small><h2 id="bal">฿0</h2></div><div class="card"><small>รอตรวจ</small><h2 id="pending">฿0</h2></div><div class="card"><small>สะสม</small><h2 id="total">฿0</h2></div></div>
+<div class="card"><h2>ภารกิจ</h2><div id="missions"></div></div>
+<div class="card"><h2>ขอถอน</h2><input id="amount" type="number" placeholder="จำนวนเงิน"><select id="method"><option>PromptPay</option><option>บัญชีธนาคาร</option></select><input id="dest" placeholder="ข้อมูลรับเงิน"><button onclick="withdraw()">ส่งคำขอถอน</button><button onclick="logout()" style="background:#52677c">ออกจากระบบ</button></div></div>
+<script>
+let token=localStorage.getItem("earnjoy_token");
+const api=(u,o={})=>fetch(u,{...o,headers:{"Content-Type":"application/json",...(o.headers||{}),...(token?{Authorization:"Bearer "+token}:{})}}).then(async r=>{let x=await r.json();if(!r.ok)throw Error(x.error||"เกิดข้อผิดพลาด");return x});
+function say(x){document.getElementById("msg").textContent=x}
+async function register(){try{let x=await api("/api/auth/register",{method:"POST",body:JSON.stringify({name:name.value,email:email.value,password:password.value})});token=x.token;localStorage.setItem("earnjoy_token",token);await boot()}catch(e){say(e.message)}}
+async function login(){try{let x=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:email.value,password:password.value})});token=x.token;localStorage.setItem("earnjoy_token",token);await boot()}catch(e){say(e.message)}}
+async function boot(){auth.style.display="none";dash.style.display="block";let u=await api("/api/me");bal.textContent="฿"+u.balance.toFixed(2);pending.textContent="฿"+u.pending.toFixed(2);total.textContent="฿"+u.totalEarned.toFixed(2);let ms=await api("/api/missions");missions.innerHTML=ms.map(m=>`<div class="card mission"><div><b>${m.title}</b><div class="muted">${m.description}</div><b style="color:#11a75e">฿${m.reward.toFixed(2)}</b></div><button onclick="claim('${m.id}')">ทำภารกิจ</button></div>`).join("")}
+async function claim(id){try{let x=await api("/api/missions/"+id+"/claim",{method:"POST"});alert(x.message);boot()}catch(e){alert(e.message)}}
+async function withdraw(){try{let x=await api("/api/withdrawals",{method:"POST",body:JSON.stringify({amount:Number(amount.value),method:method.value,destination:dest.value})});alert(x.message);boot()}catch(e){alert(e.message)}}
+function logout(){localStorage.removeItem("earnjoy_token");location.reload()}
+if(token)boot().catch(()=>{localStorage.removeItem("earnjoy_token");token=null});
+</script></div></body></html>
