@@ -152,5 +152,5 @@ app.post("/api/admin/withdrawals/:id/reject", auth, admin, (req,res)=>{
   saveDb(db);res.json({message:"ปฏิเสธและคืนยอดแล้ว"});
 });
 
-app.get("*", (_,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+app.get("/{*splat}", (_, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.listen(PORT,()=>console.log(`EarnJoy running at http://localhost:${PORT}`));
