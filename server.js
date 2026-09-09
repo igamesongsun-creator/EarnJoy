@@ -749,7 +749,26 @@ app.post("/api/admin/withdrawals/:id/reject", auth, admin, async (req, res) => {
 app.get("/{*splat}", (_, res) => {
   res.sendFile(process.cwd() + "/public/index.html");
 });
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const token = getToken(req);
+    if (!token) return res.status(401).json({ error: "กรุณาเข้าสู่ระบบ" });
 
+    const password = req.body?.password;
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: "รหัสผ่านต้องมีอย่างน้อย 6 ตัว" });
+    }
+
+    const sb = clientFor(token);
+    const { error } = await sb.auth.updateUser({ password });
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`EarnJoy API running on port ${PORT}`);
 });
