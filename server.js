@@ -760,6 +760,20 @@ app.post("/api/auth/reset-password", async (req, res) => {
     }
 
     const sb = clientFor(token);
+    const refreshToken = req.body?.refresh_token;
+
+if (!refreshToken) {
+  return res.status(400).json({ error: "ไม่พบ refresh token" });
+}
+
+const { error: sessionError } = await sb.auth.setSession({
+  access_token: token,
+  refresh_token: refreshToken
+});
+
+if (sessionError) {
+  return res.status(400).json({ error: sessionError.message });
+}
     const { error } = await sb.auth.updateUser({ password });
 
     if (error) return res.status(400).json({ error: error.message });
