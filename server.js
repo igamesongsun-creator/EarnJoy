@@ -745,7 +745,27 @@ app.post("/api/admin/withdrawals/:id/reject", auth, admin, async (req, res) => {
     message: "ปฏิเสธการถอนเงินและคืนยอดแล้ว"
   });
 });
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const email = req.body?.email;
 
+    if (!email) {
+      return res.status(400).json({ error: "กรุณากรอกอีเมล" });
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://earnjoy-1.onrender.com/"
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 app.get("/{*splat}", (_, res) => {
   res.sendFile(process.cwd() + "/public/index.html");
 });
