@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EarnJoy Admin</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:700px;margin:auto;padding:20px;background:#f5f5f5}
+    .box{background:white;padding:20px;border-radius:14px;margin-bottom:15px}
+    input,button{width:100%;padding:12px;margin:6px 0;box-sizing:border-box}
+    button{cursor:pointer;font-weight:bold}
+    pre{white-space:pre-wrap}
+    .claim{border:1px solid #ddd;padding:12px;margin:10px 0;border-radius:10px}
+  </style>
+</head>
+
+<body>
+  <h1>EarnJoy Admin</h1>
+
+  <div class="box">
+    <h2>สร้าง Admin ครั้งแรก</h2>
+    <input id="setupName" placeholder="ชื่อ Admin" value="EarnJoy Admin">
+    <input id="setupEmail" type="email" placeholder="อีเมล Admin">
+    <input id="setupPassword" type="password" placeholder="รหัสผ่านอย่างน้อย 6 ตัว">
+    <button onclick="setupAdmin()">สร้าง Admin</button>
+  </div>
+
+  <div class="box">
+    <h2>เข้าสู่ระบบ Admin</h2>
+    <input id="loginEmail" type="email" placeholder="อีเมล Admin">
+    <input id="loginPassword" type="password" placeholder="รหัสผ่าน">
+    <button onclick="loginAdmin()">เข้าสู่ระบบ</button>
+  </div>
+
+  <div class="box">
+    <button onclick="loadClaims()">โหลดรายการภารกิจรอตรวจ</button>
+    <button onclick="logout()">ออกจากระบบ</button>
+    <div id="out"></div>
+  </div>
+
+<script>
+const out = document.getElementById("out");
+
+async function callApi(url, options={}) {
+  const token = localStorage.getItem("earnjoy_token");
+  options.headers = {
+    "Content-Type":"application/json",
+    ...(options.headers||{})
+  };
+  if(token) options.headers.Authorization = "Bearer " + token;
+
+  const r = await fetch(url, options);
+  const x = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(x.error || "เกิดข้อผิดพลาด");
+  return x;
+}
+
+async function setupAdmin(){
+  try{
+    const x = await callApi("/api/admin/setup",{
+      method:"POST",
+      body:JSON.stringify({
+        name:document.getElementById("setupName").value,
+        email:document.getElementById("setupEmail").value,
+        password:document.getElementById("setupPassword").value
+      })
+    });
+
+    if(x.token){
+      localStorage.setItem("earnjoy_token",x.token);
+      out.innerHTML="<h3>สร้าง Admin สำเร็จ ✅</h3>";
+      loadClaims();
+    }
+  }catch(e){
+    out.innerHTML="<p>"+e.message+"</p>";
+  }
+}
+
+async function loginAdmin(){
+  try{
+    const x = await callApi("/api/auth/login",{
+      method:"POST",
+      body:JSON.stringify({
+        email:document.getElementById("loginEmail").value,
+        password:document.getElementById("loginPassword").value
+      })
+    });
+
+    localStorage.setItem("earnjoy_token",x.token);
+    out.innerHTML="<h3>เข้าสู่ระบบสำเร็จ ✅</h3>";
+    loadClaims();
+  }catch(e){
+    out.innerHTML="<p>"+e.message+"</p>";
+  }
+}
+
+async function loadClaims(){
+  try{
+    const x = await callApi("/api/admin/claims");
+    const claims = x.claims || [];
+
+    if(!claims.length){
+      out.innerHTML="<p>ไม่มีรายการรอตรวจ</p>";
+      return;
+    }
+
+    out.innerHTML = claims.map(c=>`
+      <div class="claim">
+        <b>Claim ID:</b> ${c.id}<br>
+        <b>User ID:</b> ${c.userId}<br>
+        <b>Mission ID:</b> ${c.missionId}<br>
+        <b>รางวัล:</b> ฿${c.reward}<br>
+        <b>สถานะ:</b> ${c.status}<br>
+        ${c.status==="pending" ? `
+          <button onclick="approveClaim('${c.id}')">✅ อนุมัติ</button>
+          <button onclick="rejectClaim('${c.id}')">❌ ปฏิเสธ</button>
+        ` : ""}
+      </div>
+    `).join("");
+
+  }catch(e){
+    out.innerHTML="<p>"+e.message+"</p>";
+  }
+}
+
+async function approveClaim(id){
+  try{
+    await callApi("/api/admin/claims/"+id+"/approve",{method:"POST"});
+    alert("อนุมัติรางวัลแล้ว ✅");
+    loadClaims();
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+async function rejectClaim(id){
+  try{
+    await callApi("/api/admin/claims/"+id+"/reject",{method:"POST"});
+    alert("ปฏิเสธรายการแล้ว");
+    loadClaims();
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+function logout(){
+  localStorage.removeItem("earnjoy_token");
+  out.innerHTML="<p>ออกจากระบบแล้ว</p>";
+}
+</script>
+
+</body>
+</html>
