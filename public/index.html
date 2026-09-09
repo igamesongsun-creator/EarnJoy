@@ -29,6 +29,7 @@ if(token)boot().catch(()=>{localStorage.removeItem("earnjoy_token");token=null})
 <script>
 const hashParams = new URLSearchParams(location.hash.substring(1));
 const recoveryToken = hashParams.get("access_token");
+const recoveryRefreshToken = hashParams.get("refresh_token");
 const recoveryType = hashParams.get("type");
 
 if (recoveryToken && recoveryType === "recovery") {
@@ -51,8 +52,10 @@ async function resetPassword() {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + recoveryToken
       },
-      body: JSON.stringify({ password })
-    });
+      body: JSON.stringify({
+  password,
+  refresh_token: recoveryRefreshToken
+}));
 
     const x = await r.json();
 
